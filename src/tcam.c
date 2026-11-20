@@ -7,7 +7,7 @@ tcam_status_t tcam_init(tcam_t *tcam,
 {
     if ((tcam == NULL) ||
         (model == TCAM_MODEL_UNKNOWN) ||
-        (model >= TCAM_MODEL_COUNT) ||
+        ((uint32_t)model >= (uint32_t)TCAM_MODEL_COUNT) ||
         (ops == NULL) ||
         (ops->cmd.send == NULL) ||
         (ops->cmd.recv == NULL) ||

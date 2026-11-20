@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+Range-check cast only. `tcam_init()` now compares the model argument as `(uint32_t)model >= (uint32_t)TCAM_MODEL_COUNT`, so a negative enumerator value cannot pass the check on a toolchain whose enum underlying type is signed. The explicit `TCAM_MODEL_UNKNOWN` rejection, the callback checks and everything after binding are unchanged.
+
+- On the target toolchain the fix is inert: armclang with `-fshort-enums` already gives these enums an unsigned underlying type. The library and the example still pass the `build.sh` warning set with armclang 6.24.
+- No protocol or decode behaviour changed; the 0.1.0 contract and its known gaps carry over.
+
 ## 0.1.0
 
 Initial public release. Extracted from the in-tree thermal camera middleware of the handheld thermal imager firmware.
