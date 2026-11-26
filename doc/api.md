@@ -1,6 +1,6 @@
 # API contract
 
-The declarations live in `src/tcam.h` (object and port), `src/tcam_mini212.h` and `src/tcam_tm30.h` (drivers). No function allocates, no function keeps writable static data, and the only state between calls is the caller-owned `tcam_t`. Every function is blocking for the duration of its port exchanges and returns `TCAM_OK` or `TCAM_ERROR`; no other status values exist in this release.
+The declarations live in `src/tcam.h` (object, port, shared stream types and stream entry points), `src/tcam_mini212.h` and `src/tcam_tm30.h` (drivers). No function allocates, no function keeps writable static data, and the only state between calls is the caller-owned `tcam_t`. Every function is blocking for the duration of its port exchanges and returns `TCAM_OK` or `TCAM_ERROR`; no other status values exist in this release.
 
 A call that returns `TCAM_ERROR` has performed no processing the caller can use: either the exchange failed or the response failed validation. Output parameters are written only after the parts they depend on have been validated, but a multi-field getter may have stored an earlier field before a later one was rejected, so treat every output of a failed call as unspecified.
 
@@ -12,7 +12,7 @@ tcam_status_t tcam_init(tcam_t *tcam, tcam_model_t model, const tcam_ops_t *ops)
 
 Validates the object pointer, the model (`TCAM_MODEL_UNKNOWN` and values at or beyond `TCAM_MODEL_COUNT` are rejected), the table pointer and all seven callbacks, then stores the model tag and the table pointer. Returns `TCAM_ERROR` without storing anything if a check fails.
 
-The ops table must stay valid for the object's lifetime, normally as a `static const` object. The library keeps a pointer, not a copy. `tcam_init()` sends nothing: the module must already be powered and past its boot time when the first command is issued, and `probe()` is the first exchange.
+The ops table must stay valid for the object's lifetime, normally as a `static const` object. The library keeps a pointer, not a copy. `tcam_init()` sends nothing: the module must already be powered and past its boot time when the first command is issued, and `tcam_device_probe()` is the first exchange.
 
 ## Model binding
 
@@ -20,16 +20,17 @@ The ops table must stay valid for the object's lifetime, normally as a `static c
 | --- | --- | --- |
 | `TCAM_MODEL_MINI212` | `tcam_mini212.h` | `tcam_mini212_*` |
 | `TCAM_MODEL_TM30` | `tcam_tm30.h` | `tcam_tm30_*` |
+| both | `tcam.h` | `tcam_device_probe`, `tcam_stream_*` |
 
-There is no common command dispatcher: the frame formats and parameter sets have nothing in common beyond the port. Every driver function checks `tcam->model` first and returns `TCAM_ERROR` without touching the port when the object is bound to the other model, so a mixed call fails fast instead of misaddressing the module.
+`tcam_device_probe()` and the `tcam_stream_*` functions live in `tcam.h`, take only the camera object, and dispatch on the bound model. Every per-model driver function checks `tcam->model` first and returns `TCAM_ERROR` without touching the port when the object is bound to the other model, so a mixed call fails fast instead of misaddressing the module.
 
-`probe()` is the first command for either driver. MINI212 reads the status page; TM30 reads the CID. A probe failure means no valid answer, not necessarily a broken module: TM30 answers only a few seconds after power-on.
+`tcam_device_probe()` is the first command for either model: MINI212 reads the status page, TM30 reads the CID. A probe failure means no valid answer, not necessarily a broken module: TM30 answers only a few seconds after power-on. The per-model `tcam_mini212_probe()` and `tcam_tm30_probe()` remain available and do the same exchange for their model.
 
 ## Common call shapes
 
 - `get_*` sends one read request and validates the whole response, including the echoed page/command identifiers and the ranges or enum values of every field, before storing outputs.
 - `set_*` and `do_*` range-check or enum-check the arguments first, then send one write command and require a valid acknowledgement.
-- `*_stream_*` functions delegate to the port (see [Stream](#stream)); `*_stream_frame_decode` is pure and makes no port call.
+- `tcam_stream_*` functions delegate to the port (see [Stream](#stream)); `tcam_stream_frame_decode` dispatches to the bound model's decoder and makes no port call.
 
 ## MINI212 driver
 
@@ -120,12 +121,14 @@ Version and date replies are the only BCD-encoded parameters in the driver; time
 
 ## Stream
 
-All four stream functions follow the same shape for both models:
+The stream functions live in `tcam.h` and follow the same shape for both models:
 
-- `*_stream_start()` calls the port's `configure` callback with the model's frame size and then `start`. Calling it again re-arms the port with the same size.
-- `*_stream_frame_acquire(tcam, &frame, timeout_ms)` waits up to `timeout_ms` in the port for one complete frame and stores its address. The library never copies the frame; it stays valid until release.
-- `*_stream_frame_release()` hands the frame back to the port. Decode before release.
-- `*_stream_frame_decode(tcam, frame, &info)` makes no port call. It validates the parameter signature and fills the info structure; matrix views point into `frame`.
+- `tcam_stream_start()` looks up the model's frame size, calls the port's `configure` callback with it and then `start`. Calling it again re-arms the port with the same size.
+- `tcam_stream_frame_acquire(tcam, &frame, timeout_ms)` waits up to `timeout_ms` in the port for one complete frame and stores its address. The library never copies the frame; it stays valid until release.
+- `tcam_stream_frame_release()` hands the frame back to the port. Decode before release.
+- `tcam_stream_frame_decode(tcam, frame, &info)` makes no port call. It dispatches to the bound model's decoder, validates the parameter signature and fills the info structure; matrix views point into `frame`.
+
+The per-model `tcam_mini212_stream_frame_decode()` and `tcam_tm30_stream_frame_decode()` are still declared in the model headers for direct use; both fill the shared `tcam_stream_frame_info_t`.
 
 | Model | Frame size passed to `configure` |
 | --- | ---: |
@@ -157,6 +160,8 @@ The frame is 512 x 193 x 2 bytes. Lines 0-191 carry MT in items 0-255 and YUV in
 | 118 | u16 | Tail, `0x6666` |
 
 Reserved words sit between the listed fields; the struct in `tcam_mini212.c` fixes the spacing. The block is copied through a structure, so the target must be little-endian with 16-bit fields at those offsets. Coordinates are returned as reported (the MT is 256 x 192); temperatures are returned in the `mult10` units above.
+
+The shared `tcam_stream_frame_info_t` exposes the shutter-off flag as `freezed` plus the maximum, minimum and average temperatures with the maximum and minimum coordinates. The humidity, distance, emissivity and reflected-temperature words are present in the block but are not surfaced; read them with the per-model getters if you need them.
 
 Decoded views: MT 256 x 192 u16 at offset 0, stride 512 items; YUV 256 x 192 u16 at byte offset 512, stride 512 items.
 

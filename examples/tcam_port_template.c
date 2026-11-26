@@ -6,7 +6,6 @@
 #include <stdint.h>
 
 #include "tcam.h"
-#include "tcam_tm30.h"
 
 typedef struct {
     /* Everything your board needs to reach the module, kept next to the
@@ -108,31 +107,31 @@ tcam_status_t example_tm30_up(tcam_t *camera)
 {
     tcam_status_t ret;
     void *frame;
-    tcam_tm30_stream_frame_info_t frame_info;
+    tcam_stream_frame_info_t frame_info;
 
     ret = tcam_init(camera, TCAM_MODEL_TM30, &example_ops);
     if (ret != TCAM_OK) {
         return ret;
     }
 
-    ret = tcam_tm30_probe(camera);
+    ret = tcam_device_probe(camera);
     if (ret != TCAM_OK) {
         return ret;
     }
 
-    ret = tcam_tm30_stream_start(camera);
+    ret = tcam_stream_start(camera);
     if (ret != TCAM_OK) {
         return ret;
     }
 
-    ret = tcam_tm30_stream_frame_acquire(camera, &frame, 1000U);
+    ret = tcam_stream_frame_acquire(camera, &frame, 1000U);
     if (ret != TCAM_OK) {
         return ret;
     }
 
-    ret = tcam_tm30_stream_frame_decode(camera, frame, &frame_info);
+    ret = tcam_stream_frame_decode(camera, frame, &frame_info);
     (void)frame_info;
-    (void)tcam_tm30_stream_frame_release(camera);
+    (void)tcam_stream_frame_release(camera);
 
     return ret;
 }

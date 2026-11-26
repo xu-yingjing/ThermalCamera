@@ -47,6 +47,39 @@ typedef struct {
     const tcam_ops_t *ops;
 } tcam_t;
 
+typedef struct {
+    uint16_t x;
+    uint16_t y;
+    int16_t temp_mult10;
+} tcam_stream_frame_point_t;
+
+typedef struct {
+    const uint8_t *data;
+    uint16_t width;
+    uint16_t height;
+    uint8_t bytes_per_item;
+    uint32_t stride_item;
+} tcam_stream_frame_matrix_t;
+
+typedef struct {
+    bool freezed;
+    tcam_stream_frame_point_t max_point;
+    tcam_stream_frame_point_t min_point;
+    int16_t avg_temp_mult10;
+    tcam_stream_frame_matrix_t mt_matrix;
+    tcam_stream_frame_matrix_t yuv_matrix;
+} tcam_stream_frame_info_t;
+
 tcam_status_t tcam_init(tcam_t *tcam, tcam_model_t model, const tcam_ops_t *ops);
+
+tcam_status_t tcam_device_probe(tcam_t *tcam);
+
+tcam_status_t tcam_stream_start(const tcam_t *tcam);
+
+tcam_status_t tcam_stream_frame_acquire(const tcam_t *tcam, void **frame, uint32_t timeout_ms);
+
+tcam_status_t tcam_stream_frame_release(const tcam_t *tcam);
+
+tcam_status_t tcam_stream_frame_decode(const tcam_t *tcam, const void *frame, tcam_stream_frame_info_t *frame_info);
 
 #endif

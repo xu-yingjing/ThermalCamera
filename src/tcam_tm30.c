@@ -1709,51 +1709,12 @@ tcam_status_t tcam_tm30_get_atmospheric_temp(const tcam_t *tcam, tcam_tm30_atmos
     return TCAM_OK;
 }
 
-tcam_status_t tcam_tm30_stream_start(const tcam_t *tcam)
+uint32_t tcam_tm30_stream_frame_get_size(void)
 {
-    if (tcam_tm30_object_check(tcam) != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    if (tcam->ops->stream.configure(STREAM_FRAME_SIZE) != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    if (tcam->ops->stream.start() != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    return TCAM_OK;
+    return STREAM_FRAME_SIZE;
 }
 
-tcam_status_t tcam_tm30_stream_frame_acquire(const tcam_t *tcam, void **frame, uint32_t timeout_ms)
-{
-    if ((tcam_tm30_object_check(tcam) != TCAM_OK) ||
-        (frame == NULL)) {
-        return TCAM_ERROR;
-    }
-
-    if (tcam->ops->stream.acquire_frame(frame, timeout_ms) != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    return TCAM_OK;
-}
-
-tcam_status_t tcam_tm30_stream_frame_release(const tcam_t *tcam)
-{
-    if (tcam_tm30_object_check(tcam) != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    if (tcam->ops->stream.release_frame() != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    return TCAM_OK;
-}
-
-tcam_status_t tcam_tm30_stream_frame_decode(const tcam_t *tcam, const void *frame, tcam_tm30_stream_frame_info_t *frame_info)
+tcam_status_t tcam_tm30_stream_frame_decode(const tcam_t *tcam, const void *frame, tcam_stream_frame_info_t *frame_info)
 {
     const void *frame_param;
     stream_frame_param_t param;

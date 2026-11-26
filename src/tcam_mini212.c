@@ -1364,51 +1364,12 @@ tcam_status_t tcam_mini212_set_custom_data(const tcam_t *tcam, const tcam_mini21
     return TCAM_OK;
 }
 
-tcam_status_t tcam_mini212_stream_start(const tcam_t *tcam)
+uint32_t tcam_mini212_stream_frame_get_size(void)
 {
-    if (tcam_mini212_object_check(tcam) != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    if (tcam->ops->stream.configure(STREAM_FRAME_SIZE) != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    if (tcam->ops->stream.start() != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    return TCAM_OK;
+    return STREAM_FRAME_SIZE;
 }
 
-tcam_status_t tcam_mini212_stream_frame_acquire(const tcam_t *tcam, void **frame, uint32_t timeout_ms)
-{
-    if ((tcam_mini212_object_check(tcam) != TCAM_OK) ||
-        (frame == NULL)) {
-        return TCAM_ERROR;
-    }
-
-    if (tcam->ops->stream.acquire_frame(frame, timeout_ms) != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    return TCAM_OK;
-}
-
-tcam_status_t tcam_mini212_stream_frame_release(const tcam_t *tcam)
-{
-    if (tcam_mini212_object_check(tcam) != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    if (tcam->ops->stream.release_frame() != TCAM_OK) {
-        return TCAM_ERROR;
-    }
-
-    return TCAM_OK;
-}
-
-tcam_status_t tcam_mini212_stream_frame_decode(const tcam_t *tcam, const void *frame, tcam_mini212_stream_frame_info_t *frame_info)
+tcam_status_t tcam_mini212_stream_frame_decode(const tcam_t *tcam, const void *frame, tcam_stream_frame_info_t *frame_info)
 {
     stream_frame_param_t param;
 
@@ -1426,11 +1387,7 @@ tcam_status_t tcam_mini212_stream_frame_decode(const tcam_t *tcam, const void *f
         return TCAM_ERROR;
     }
 
-    frame_info->distance_dm = param.distance_dm;
-    frame_info->emissivity_percent = (uint8_t)param.emissivity_percent;
-    frame_info->humidity_percent = (uint8_t)param.humidity_percent;
-    frame_info->reflected_temp_mult10 = (int16_t)param.reflected_temp_mult10;
-    frame_info->shutter_off = (param.shutter_off == 0U) ? false : true;
+    frame_info->freezed = (param.shutter_off == 0U) ? false : true;
     frame_info->min_point.x = param.min_x;
     frame_info->min_point.y = param.min_y;
     frame_info->min_point.temp_mult10 = (int16_t)param.min_temp_mult10;

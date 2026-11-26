@@ -57,11 +57,11 @@ Discard incoming bytes until the line has been quiet for `idle_ms`, bounded by `
 
 ### `stream.configure(uint32_t frame_size)`
 
-Arm the capture path for exactly `frame_size` bytes without starting it: a DCMI-style receiver programs its buffer and transfer length, a DMA setup points at the frame buffer, and so on. The library calls it from `stream_start()` with the model's size (197,632 for MINI212, 174,720 for TM30) and expects success on every call, including a repeated `stream_start()`.
+Arm the capture path for exactly `frame_size` bytes without starting it: a DCMI-style receiver programs its buffer and transfer length, a DMA setup points at the frame buffer, and so on. The library calls it from `tcam_stream_start()` with the model's size (197,632 for MINI212, 174,720 for TM30) and expects success on every call, including a repeated `tcam_stream_start()`.
 
 ### `stream.start(void)`
 
-Start capture now that the receiver is armed. Called immediately after a successful `configure`. Return `TCAM_ERROR` if the capture cannot be started; the library then reports the `stream_start()` failure.
+Start capture now that the receiver is armed. Called immediately after a successful `configure`. Return `TCAM_ERROR` if the capture cannot be started; the library then reports the `tcam_stream_start()` failure.
 
 ### `stream.acquire_frame(void **frame, uint32_t timeout_ms)`
 
@@ -76,13 +76,13 @@ Hand the buffer back to the capture path. The library calls it only after a succ
 | Library call | Port callbacks |
 | --- | --- |
 | `tcam_init` | none |
-| `*_probe`, every `get_*` | `cmd.flush_rx`, `cmd.send`, `cmd.recv` (twice for MINI212) |
+| `tcam_device_probe`, `tcam_*_probe`, every `get_*` | `cmd.flush_rx`, `cmd.send`, `cmd.recv` (twice for MINI212) |
 | every `set_*`, every `do_*` | `cmd.flush_rx`, `cmd.send`, `cmd.recv` (once) |
-| `*_stream_start` | `stream.configure`, `stream.start` |
-| `*_stream_frame_acquire` | `stream.acquire_frame` |
-| `*_stream_frame_release` | `stream.release_frame` |
-| `*_stream_frame_decode` | none; frame memory only |
+| `tcam_stream_start` | `stream.configure`, `stream.start` |
+| `tcam_stream_frame_acquire` | `stream.acquire_frame` |
+| `tcam_stream_frame_release` | `stream.release_frame` |
+| `tcam_stream_frame_decode` | none; frame memory only |
 
 ## Board bring-up
 
-Power sequencing, reset, pin muxing, the UART baud rate, DCMI/DVP configuration and the module's boot time are outside the library. Two points that the library makes visible: the first `probe()` must not run before the module is ready (TM30 answers roughly 2.6 s after power-on, so early probes time out), and the stream layout decoded by this release assumes the module's MT+YUV content mode with the default geometry. A MINI212 frame buffer needs 197,632 bytes and an alignment suitable for the DMA engine that fills it; the library adds no alignment requirement of its own.
+Power sequencing, reset, pin muxing, the UART baud rate, DCMI/DVP configuration and the module's boot time are outside the library. Two points that the library makes visible: the first `tcam_device_probe()` must not run before the module is ready (TM30 answers roughly 2.6 s after power-on, so early probes time out), and the stream layout decoded by this release assumes the module's MT+YUV content mode with the default geometry. A MINI212 frame buffer needs 197,632 bytes and an alignment suitable for the DMA engine that fills it; the library adds no alignment requirement of its own.

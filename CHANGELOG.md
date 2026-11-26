@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.2
+
+Stream path unified behind the bound model. The per-model stream entry points and per-model frame-info types are gone; `tcam.h` now declares one set of entry points that dispatch on `tcam->model`, and one shared `tcam_stream_frame_info_t`.
+
+- New shared entry points in `tcam.h`: `tcam_device_probe()`, `tcam_stream_start()`, `tcam_stream_frame_acquire()`, `tcam_stream_frame_release()` and `tcam_stream_frame_decode()`. Each checks the object and switches on the model, so the application no longer repeats the model in the call name.
+- Removed `tcam_tm30_stream_start`, `tcam_tm30_stream_frame_acquire`, `tcam_tm30_stream_frame_release` and the `tcam_mini212_` equivalents. `tcam_stream_start()` now reads the frame size from the model through `tcam_tm30_stream_frame_get_size()` / `tcam_mini212_stream_frame_get_size()`, then arms the port.
+- `tcam_tm30_stream_frame_info_t` and `tcam_mini212_stream_frame_info_t` are replaced by one `tcam_stream_frame_info_t`, with `tcam_stream_frame_point_t` and `tcam_stream_frame_matrix_t` moved to `tcam.h`. Both decoders fill it.
+- MINI212 decode no longer surfaces `distance_dm`, `emissivity_percent`, `humidity_percent` or `reflected_temp_mult10`; the parameter block still carries them, and the per-model getters still return them. The shutter-off flag is now the shared `freezed` field.
+- The per-model `tcam_tm30_probe()` and `tcam_mini212_probe()` remain; `tcam_device_probe()` is the model-agnostic wrapper. The per-model `*_stream_frame_decode()` also remain for direct use.
+- Breaking change for callers: switch `tcam_<model>_stream_*` calls to `tcam_stream_*`, and `tcam_<model>_stream_frame_info_t` to `tcam_stream_frame_info_t`. No protocol, frame layout or decode arithmetic changed.
+
 ## 0.1.1
 
 Range-check cast only. `tcam_init()` now compares the model argument as `(uint32_t)model >= (uint32_t)TCAM_MODEL_COUNT`, so a negative enumerator value cannot pass the check on a toolchain whose enum underlying type is signed. The explicit `TCAM_MODEL_UNKNOWN` rejection, the callback checks and everything after binding are unchanged.

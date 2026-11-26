@@ -296,33 +296,6 @@ typedef enum {
 #define TCAM_MINI212_TWO_POINT_CALIBRATION_HIGH_TEMP_MULT10_MIN (-400)
 #define TCAM_MINI212_TWO_POINT_CALIBRATION_HIGH_TEMP_MULT10_MAX (8000)
 
-typedef struct {
-    uint16_t x;
-    uint16_t y;
-    int16_t temp_mult10;
-} tcam_mini212_stream_frame_point_t;
-
-typedef struct {
-    const uint8_t *data;
-    uint16_t width;
-    uint16_t height;
-    uint8_t bytes_per_item;
-    uint32_t stride_item;
-} tcam_mini212_stream_frame_matrix_t;
-
-typedef struct {
-    uint16_t distance_dm;
-    uint8_t emissivity_percent;
-    uint8_t humidity_percent;
-    int16_t reflected_temp_mult10;
-    bool shutter_off;
-    tcam_mini212_stream_frame_point_t max_point;
-    tcam_mini212_stream_frame_point_t min_point;
-    int16_t avg_temp_mult10;
-    tcam_mini212_stream_frame_matrix_t mt_matrix;
-    tcam_mini212_stream_frame_matrix_t yuv_matrix;
-} tcam_mini212_stream_frame_info_t;
-
 tcam_status_t tcam_mini212_probe(const tcam_t *tcam);
 
 tcam_status_t tcam_mini212_get_status_page(const tcam_t *tcam, tcam_mini212_status_page_t *status_page);
@@ -423,12 +396,8 @@ tcam_status_t tcam_mini212_do_two_point_calibration(const tcam_t *tcam);
 
 tcam_status_t tcam_mini212_set_custom_data(const tcam_t *tcam, const tcam_mini212_custom_data_t *custom_data);
 
-tcam_status_t tcam_mini212_stream_start(const tcam_t *tcam);
+uint32_t tcam_mini212_stream_frame_get_size(void);
 
-tcam_status_t tcam_mini212_stream_frame_acquire(const tcam_t *tcam, void **frame, uint32_t timeout_ms);
-
-tcam_status_t tcam_mini212_stream_frame_release(const tcam_t *tcam);
-
-tcam_status_t tcam_mini212_stream_frame_decode(const tcam_t *tcam, const void *frame, tcam_mini212_stream_frame_info_t *frame_info);
+tcam_status_t tcam_mini212_stream_frame_decode(const tcam_t *tcam, const void *frame, tcam_stream_frame_info_t *frame_info);
 
 #endif
